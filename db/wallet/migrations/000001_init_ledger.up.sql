@@ -1,11 +1,9 @@
 BEGIN;
-
 -- Debit or credit: the two sides of every entry
 CREATE TYPE entry_direction AS enum (
   'debit',
   'credit'
 );
-
 -- An account is anything that holds money; a user's wallet,
 -- or a system account, like the bank account that deposits
 -- come from
@@ -19,16 +17,13 @@ CREATE TABLE accounts (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (id, currency)
 );
-
 CREATE INDEX accounts_owner_id_idx ON accounts (owner_id);
-
 -- The journal: one row per movement of money
 CREATE TABLE transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid (),
   description text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 -- One line of a transaction: an amount debited or credited
 -- to an account
 CREATE TABLE entries (
@@ -42,12 +37,9 @@ CREATE TABLE entries (
   -- an entry's currency must match it's account's currency
   FOREIGN KEY (account_id, currency) REFERENCES accounts (id, currency)
 );
-
 -- Postgres does not index fkeys
 CREATE INDEX entries_transaction_id_idx ON entries (transaction_id);
-
 CREATE INDEX entries_account_id_idx ON entries (account_id);
-
 -- A transaction must have entries, and its debits must equal
 -- its credits in every currency. Checked at COMMIT, once all
 -- entries exist
@@ -96,17 +88,14 @@ END IF;
   RETURN NULL;
 END;
 $$;
-
 CREATE CONSTRAINT TRIGGER transactions_balanced
   AFTER INSERT ON transactions DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW
   EXECUTE FUNCTION check_transaction_balanced ();
-
 CREATE CONSTRAINT TRIGGER entries_balanced
   AFTER INSERT ON entries DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW
   EXECUTE FUNCTION check_transaction_balanced ();
-
 -- The ledger is append-only: mistakes are fixed with a reversing transaction
 CREATE FUNCTION forbid_ledger_changes ()
   RETURNS TRIGGER
@@ -117,17 +106,14 @@ BEGIN
     USING errcode = 'restrict_violation';
 END;
 $$;
-
 CREATE TRIGGER transactions_append_only
   BEFORE UPDATE OR DELETE ON transactions
   FOR EACH ROW
   EXECUTE FUNCTION forbid_ledger_changes ();
-
 CREATE TRIGGER entries_append_only
   BEFORE UPDATE OR DELETE ON entries
   FOR EACH ROW
   EXECUTE FUNCTION forbid_ledger_changes ();
-
 -- Balances are derived from entries, never stored
 CREATE VIEW account_balances AS
 SELECT
@@ -145,5 +131,4 @@ FROM
   LEFT JOIN entries e ON e.account_id = a.id
 GROUP BY
   a.id;
-
 COMMIT;
