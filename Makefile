@@ -17,3 +17,16 @@ migrate-version:
 migrate-new:
 	@test -n "$(name)" || (echo "usage: make migrate-new name=seq_name" && exit 1)
 	migrate-new -ext sql -dir ./db/$(SERVICE)/migrations -seq $(name)
+
+.PHONY: generate test
+
+# Regenerate the Go code for every service's SQL queries
+generate: 
+	@sqlc generate
+
+# Integration tests use the local Docker Postgres. Without the URL they skip
+WALLET_TEST_DATABASE_URL ?= postgres://payments:payments@localhost:5432/wallet?sslmode=disable
+export WALLET_TEST_DATABASE_URL
+
+test:
+	@go test -count=1 $(TESTFLAGS) ./...
