@@ -21,7 +21,7 @@ func newStore(t *testing.T) *wallet.Store {
 		t.Skip("WALLET_TEST_DATABASE_URL not set, skipping integration test")
 	}
 
-	pool, err := postgres.NewPool(t.Context(), dsn)
+	pool, err := postgres.NewPool(t.Context(), dsn, 4)
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
