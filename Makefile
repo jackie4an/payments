@@ -16,7 +16,7 @@ migrate-version:
 
 migrate-new:
 	@test -n "$(name)" || (echo "usage: make migrate-new name=seq_name" && exit 1)
-	migrate-new -ext sql -dir ./db/$(SERVICE)/migrations -seq $(name)
+	migrate create -ext sql -dir ./db/$(SERVICE)/migrations -seq $(name)
 
 .PHONY: generate test
 
