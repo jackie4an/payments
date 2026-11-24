@@ -12,13 +12,14 @@ import (
 )
 
 const createAccount = `-- name: CreateAccount :one
-INSERT INTO accounts(owner_id, name, currency, normal_balance)
-  VALUES ($1, $2, $3, $4)
+INSERT INTO accounts(kind, owner_id, name, currency, normal_balance)
+  VALUES ($1, $2, $3, $4, $5)
 RETURNING
-  id, owner_id, name, currency, normal_balance, created_at
+  id, owner_id, name, currency, normal_balance, created_at, kind
 `
 
 type CreateAccountParams struct {
+	Kind          AccountKind    `json:"kind"`
 	OwnerID       *uuid.UUID     `json:"owner_id"`
 	Name          string         `json:"name"`
 	Currency      string         `json:"currency"`
@@ -27,6 +28,7 @@ type CreateAccountParams struct {
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error) {
 	row := q.db.QueryRow(ctx, createAccount,
+		arg.Kind,
 		arg.OwnerID,
 		arg.Name,
 		arg.Currency,
@@ -40,13 +42,14 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		&i.Currency,
 		&i.NormalBalance,
 		&i.CreatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const getAccount = `-- name: GetAccount :one
 SELECT
-  id, owner_id, name, currency, normal_balance, created_at
+  id, owner_id, name, currency, normal_balance, created_at, kind
 FROM
   accounts
 WHERE
@@ -63,6 +66,7 @@ func (q *Queries) GetAccount(ctx context.Context, id uuid.UUID) (Account, error)
 		&i.Currency,
 		&i.NormalBalance,
 		&i.CreatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -88,9 +92,40 @@ func (q *Queries) GetAccountBalance(ctx context.Context, accountID uuid.UUID) (A
 	return i, err
 }
 
+const getSystemAccount = `-- name: GetSystemAccount :one
+SELECT
+  id, owner_id, name, currency, normal_balance, created_at, kind
+FROM
+  accounts
+WHERE
+  kind = 'system'
+  AND name = $1
+  AND currency = $2
+`
+
+type GetSystemAccountParams struct {
+	Name     string `json:"name"`
+	Currency string `json:"currency"`
+}
+
+func (q *Queries) GetSystemAccount(ctx context.Context, arg GetSystemAccountParams) (Account, error) {
+	row := q.db.QueryRow(ctx, getSystemAccount, arg.Name, arg.Currency)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Name,
+		&i.Currency,
+		&i.NormalBalance,
+		&i.CreatedAt,
+		&i.Kind,
+	)
+	return i, err
+}
+
 const listAccountByOwner = `-- name: ListAccountByOwner :many
 SELECT
-  id, owner_id, name, currency, normal_balance, created_at
+  id, owner_id, name, currency, normal_balance, created_at, kind
 FROM
   accounts
 WHERE
@@ -115,6 +150,7 @@ func (q *Queries) ListAccountByOwner(ctx context.Context, ownerID uuid.UUID) ([]
 			&i.Currency,
 			&i.NormalBalance,
 			&i.CreatedAt,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
