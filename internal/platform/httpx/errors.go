@@ -27,8 +27,9 @@ type errorDetail struct {
 // the code, never on the message
 func classify(err error) (int, string) {
 	var (
-		reqErr *requestError
-		valErr *apperr.ValidationError
+		reqErr  *requestError
+		valErr  *apperr.ValidationError
+		ruleErr *apperr.RuleError
 	)
 
 	switch {
@@ -37,6 +38,9 @@ func classify(err error) (int, string) {
 
 	case errors.As(err, &valErr):
 		return http.StatusUnprocessableEntity, "invalid_input"
+
+	case errors.As(err, &ruleErr):
+		return http.StatusUnprocessableEntity, ruleErr.Code
 
 	case errors.Is(err, apperr.ErrNotFound):
 		return http.StatusNotFound, "not_found"

@@ -39,6 +39,7 @@ func decodeError(t *testing.T, rr *httptest.ResponseRecorder) errorResponse {
 func TestError(t *testing.T) {
 	invalid := &apperr.ValidationError{}
 	invalid.Add("amount", "must be positive")
+	broke := apperr.NewRule("insufficient_funds", "insufficient funds")
 
 	tests := []struct {
 		name    string
@@ -67,6 +68,13 @@ func TestError(t *testing.T) {
 			422,
 			"invalid_input",
 			"invalid input: amount",
+		},
+		{
+			"rule",
+			fmt.Errorf("wallet 42: %w", broke),
+			422,
+			"insufficient_funds",
+			"wallet 42: insufficient funds",
 		},
 		{
 			"internal",

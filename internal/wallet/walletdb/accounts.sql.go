@@ -161,3 +161,22 @@ func (q *Queries) ListAccountByOwner(ctx context.Context, ownerID uuid.UUID) ([]
 	}
 	return items, nil
 }
+
+const lockAccount = `-- name: LockAccount :one
+SELECT
+  id
+FROM
+  accounts
+WHERE
+  id = $1
+FOR UPDATE
+`
+
+// Locks an account's row until the end of the transaction. Anyone else who
+// locks it waits until we commit or roll back
+func (q *Queries) LockAccount(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockAccount, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
