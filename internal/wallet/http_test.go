@@ -80,6 +80,22 @@ func createWallet(t *testing.T, api http.Handler, currency string) string {
 	return decode[walletJSON](t, rr).ID
 }
 
+// createWallets creates wallets for a new owner with given currencies and returns its IDs
+func createWallets(t *testing.T, api http.Handler, owner string, currencies []string) []string {
+	t.Helper()
+
+	ids := make([]string, 0, len(currencies))
+	for _, curr := range currencies {
+		rr := call(api, "POST", "/v1/wallets", walletBody(owner, curr))
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("create wallet: status %d: %s", rr.Code, rr.Body)
+		}
+		ids = append(ids, decode[walletJSON](t, rr).ID)
+	}
+
+	return ids
+}
+
 func TestCreateWallet(t *testing.T) {
 	t.Parallel()
 
@@ -292,6 +308,44 @@ func TestEntriesRejectsBadQueries(t *testing.T) {
 	for _, query := range []string{"limit=0", "limit=101", "limit=ten", "cursor=not-a-cursor"} {
 		t.Run(query, func(t *testing.T) {
 			rr := call(api, "GET", "/v1/wallets/"+id+"/entries?"+query, "")
+			if rr.Code != http.StatusUnprocessableEntity {
+				t.Errorf("status = %d, want 422: %s", rr.Code, rr.Body)
+			}
+		})
+	}
+}
+
+func TestListWallets(t *testing.T) {
+	t.Parallel()
+
+	api := newAPI(t)
+	owner := uuid.NewString()
+	currencies := []string{"USD", "EUR", "JPY", "GBP"}
+	ids := createWallets(t, api, owner, currencies)
+
+	rr := call(api, "GET", "/v1/wallets?owner_id="+owner, "")
+	gotWallets := decode[[]walletJSON](t, rr)
+
+	got := make([]string, len(gotWallets))
+	for i := range gotWallets {
+		got[i] = gotWallets[i].ID
+	}
+
+	if !slices.Equal(got, ids) {
+		t.Errorf("got: %v, want %v", got, ids)
+	}
+
+	// owner not exists
+	owner = uuid.NewString()
+	rr = call(api, "GET", "/v1/wallets?owner_id="+owner, "")
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404: %s", rr.Code, rr.Body)
+	}
+
+	// invalid parameters
+	for _, query := range []string{"owner_id", "owner_id=1", "id=1", "owner=", "owner_id=", ""} {
+		t.Run(query, func(t *testing.T) {
+			rr := call(api, "GET", "/v1/wallets?"+query, "")
 			if rr.Code != http.StatusUnprocessableEntity {
 				t.Errorf("status = %d, want 422: %s", rr.Code, rr.Body)
 			}

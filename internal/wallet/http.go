@@ -63,6 +63,7 @@ func NewHandler(svc *Service) *Handler {
 // Register add the wallet API's routes to mux
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.Handle("POST /v1/wallets", httpx.HandlerFunc(h.createWallet))
+	mux.Handle("GET /v1/wallets", httpx.HandlerFunc(h.listWallets))
 	mux.Handle("GET /v1/wallets/{id}", httpx.HandlerFunc(h.getWallet))
 	mux.Handle("GET /v1/wallets/{id}/balance", httpx.HandlerFunc(h.getBalance))
 	mux.Handle("POST /v1/wallets/{id}/deposits", httpx.HandlerFunc(h.deposit))
@@ -98,6 +99,17 @@ func (h *Handler) createWallet(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Location", "/v1/wallets/"+acc.ID.String())
 
 	httpx.WriteJSON(w, r, http.StatusCreated, toWallet(acc))
+
+	return nil
+}
+
+func (h *Handler) listWallets(w http.ResponseWriter, r *http.Request) error {
+	accs, err := h.svc.ListWallets(r.Context(), r.URL.Query().Get("owner_id"))
+	if err != nil {
+		return err
+	}
+
+	httpx.WriteJSON(w, r, http.StatusOK, accs)
 
 	return nil
 }

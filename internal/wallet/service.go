@@ -99,6 +99,19 @@ func (s *Service) Wallet(ctx context.Context, id uuid.UUID) (Account, error) {
 	return acc, err
 }
 
+// ListWallets returns all account's wallets
+func (s *Service) ListWallets(ctx context.Context, ownerID string) ([]Account, error) {
+	var v apperr.ValidationError
+	owner, err := uuid.Parse(ownerID)
+
+	if err != nil || owner == uuid.Nil {
+		v.Add("owner_id", "must be a UUID")
+		return []Account{}, v.Err()
+	}
+
+	return s.store.ListAccounts(ctx, owner)
+}
+
 // Balance returns a wallet's balance, derived from its entries
 func (s *Service) Balance(ctx context.Context, id uuid.UUID) (AccountBalance, error) {
 	if _, err := s.Wallet(ctx, id); err != nil {

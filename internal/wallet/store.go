@@ -130,6 +130,19 @@ func (s *Store) Entries(
 	return entries, nil
 }
 
+func (s *Store) ListAccounts(ctx context.Context, ownerID uuid.UUID) ([]Account, error) {
+	accs, err := s.q.ListAccountByOwner(ctx, ownerID)
+	if err != nil {
+		return []Account{}, fmt.Errorf("list wallets %s: %w", ownerID, err)
+	}
+
+	if len(accs) == 0 {
+		return []Account{}, ErrAccountNotFound
+	}
+
+	return accs, nil
+}
+
 // isUniqueViolation reports whether err is Postgres rejecting a duplicate
 func isUniqueViolation(err error) bool {
 	pgErr, ok := errors.AsType[*pgconn.PgError](err)
