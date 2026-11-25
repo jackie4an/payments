@@ -24,6 +24,14 @@ migrate-new:
 generate: 
 	@sqlc generate
 
+# Reload docker compose
+.PHONY: docker-compose-reload
+
+docker-compose-reload:
+	@docker compose down -v
+	docker compose up -d --wait
+	$(MIGRATE) up 
+
 # Integration tests use the local Docker Postgres. Without the URL they skip
 WALLET_TEST_DATABASE_URL ?= postgres://payments:payments@localhost:5432/wallet?sslmode=disable
 export WALLET_TEST_DATABASE_URL
