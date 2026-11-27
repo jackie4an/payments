@@ -7,13 +7,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackie4an/payment/internal/platform/postgres"
 	"github.com/jackie4an/payment/internal/wallet"
 )
 
-// newStore connects to the db in WALLET_TEST_DATABASE_URL. Without it the
+// newPool connects to the db in WALLET_TEST_DATABASE_URL. Without it the
 // test is skipped, so go test ./... still passes on a machine without Docker
-func newStore(t *testing.T) *wallet.Store {
+func newPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
 	dsn := os.Getenv("WALLET_TEST_DATABASE_URL")
@@ -27,7 +28,13 @@ func newStore(t *testing.T) *wallet.Store {
 	}
 	t.Cleanup(pool.Close)
 
-	return wallet.NewStore(pool)
+	return pool
+}
+
+// newStore returns a Store on the test database
+func newStore(t *testing.T) *wallet.Store {
+	t.Helper()
+	return wallet.NewStore(newPool(t))
 }
 
 // newAccount opens a USD wallet for a new owner, so every test works on its own data

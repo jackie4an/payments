@@ -48,11 +48,18 @@ var ErrAccountExists = fmt.Errorf("%w: account already exists", apperr.ErrConfli
 type Store struct {
 	pool *pgxpool.Pool
 	q    *walletdb.Queries
+	tx   pgx.Tx // set by WithTx
 }
 
 // NewStore returns a Store that runs its queries in pool
 func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool, q: walletdb.New(pool)}
+}
+
+// WithTx returns a Store that runs everything insisde tx, a transaction that
+// belongs to the caller: ther caller commits it, and retries it
+func (s *Store) WithTx(tx pgx.Tx) *Store {
+	return &Store{pool: s.pool, q: s.q.WithTx(tx), tx: tx}
 }
 
 // CreateAccount opens a new account. OwnerID is nil for system accounts
